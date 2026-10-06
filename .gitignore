@@ -1,0 +1,10 @@
+# backend (Gradle)
+cd-watcher-server/.gradle/
+cd-watcher-server/build/
+
+# frontend (Node/Vite)
+cd-watcher-web/node_modules/
+cd-watcher-web/dist/
+
+# env
+.env
