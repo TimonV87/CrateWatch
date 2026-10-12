@@ -1,6 +1,6 @@
-# cd-watcher
+# CrateWatch
 
-Personal CD collection tracker. Artists import their main albums/EPs from MusicBrainz; each release can be moved to a Wishlist or marked Owned.
+Personal physical-media collection tracker. Search artists, import their albums/EPs from MusicBrainz, and move releases to a Wishlist or mark them Owned. Started with CDs; vinyl LPs and per-store availability watching (via `ShopLink`, see [CONTEXT.md](CONTEXT.md)) are planned next.
 
 See [CONTEXT.md](CONTEXT.md) for domain terms and [docs/adr/](docs/adr/) for design decisions.
 
@@ -9,7 +9,7 @@ See [CONTEXT.md](CONTEXT.md) for domain terms and [docs/adr/](docs/adr/) for des
 The backend image is built via the Micronaut Gradle plugin, not a committed Dockerfile:
 
 ```bash
-cd cd-watcher-server && ./gradlew dockerBuild && cd ..
+cd cratewatch-server && ./gradlew dockerBuild && cd ..
 cp .env.example .env
 docker-compose up
 ```
@@ -24,17 +24,17 @@ Requires a Postgres instance reachable at `localhost:5432` (or set `DB_HOST`/`DB
 
 **Backend:**
 ```bash
-cd cd-watcher-server
+cd cratewatch-server
 ./gradlew run
 ```
 
 **Frontend:**
 ```bash
-cd cd-watcher-web
+cd cratewatch-web
 npm install
 npm run dev
 ```
 
 ## Backend package convention
 
-Package-by-feature, matching `investments-server`: `com.cdwatcher.<feature>.{controllers,domain,repositories,services}` (e.g. `com.cdwatcher.artist.controllers.ArtistController`). Entities use Micronaut Data JDBC (`@MappedEntity` + `@JdbcRepository`) with Lombok, not Hibernate JPA.
+Package-by-feature, matching `investments-server`: `com.cratewatch.<feature>.{controllers,domain,repositories,services}` (e.g. `com.cratewatch.artist.controllers.ArtistController`). Entities use Micronaut Data JDBC (`@MappedEntity` + `@JdbcRepository`) with Lombok, not Hibernate JPA.

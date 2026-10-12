@@ -16,21 +16,26 @@ services:
       retries: 10
 
   backend:
-    image: cd-watcher-server:0.1
+    image: cratewatch-server:0.1
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-cdwatcher}
       DB_USER: ${DB_USER:-cdwatcher}
       DB_PASSWORD: ${DB_PASSWORD:-cdwatcher}
+      COVER_ART_STORAGE_PATH: /app/cover-art-cache
+      ARTIST_PHOTO_STORAGE_PATH: /app/artist-photo-cache
     ports:
       - "8080:8080"
+    volumes:
+      - cover-art-cache:/app/cover-art-cache
+      - artist-photo-cache:/app/artist-photo-cache
     depends_on:
       postgres:
         condition: service_healthy
 
   frontend:
-    build: ./cd-watcher-web
+    build: ./cratewatch-web
     ports:
       - "5173:5173"
     depends_on:
@@ -38,3 +43,5 @@ services:
 
 volumes:
   postgres-data:
+  cover-art-cache:
+  artist-photo-cache:

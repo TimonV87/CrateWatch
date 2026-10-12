@@ -1,10 +1,12 @@
 # backend (Gradle)
-cd-watcher-server/.gradle/
-cd-watcher-server/build/
+cratewatch-server/.gradle/
+cratewatch-server/build/
+cratewatch-server/cover-art-cache/
+cratewatch-server/artist-photo-cache/
 
 # frontend (Node/Vite)
-cd-watcher-web/node_modules/
-cd-watcher-web/dist/
+cratewatch-web/node_modules/
+cratewatch-web/dist/
 
 # env
 .env

@@ -4,7 +4,7 @@ Date: 2026-07-28
 
 ## Status
 
-Accepted
+Superseded by [0002](0002-shared-artist-release-catalog.md) (2026-10-12)
 
 ## Context
 

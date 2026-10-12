@@ -1,0 +1,51 @@
+micronaut:
+  application:
+    name: cratewatch-server
+  server:
+    context-path: /api/v1
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins:
+            - http://localhost:5173
+  security:
+    authentication: bearer
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}
+  http:
+    services:
+      musicbrainz:
+        url: https://musicbrainz.org/ws/2/
+        read-timeout: 10s
+      coverartarchive:
+        url: https://coverartarchive.org/
+        read-timeout: 10s
+      theaudiodb:
+        url: https://www.theaudiodb.com/api/v1/json/${THEAUDIODB_API_KEY:2}/
+        read-timeout: 10s
+
+cratewatch:
+  cover-art:
+    storage-path: ${COVER_ART_STORAGE_PATH:./cover-art-cache}
+  artist-photo:
+    storage-path: ${ARTIST_PHOTO_STORAGE_PATH:./artist-photo-cache}
+
+datasources:
+  default:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cdwatcher}
+    username: ${DB_USER:cdwatcher}
+    password: ${DB_PASSWORD:cdwatcher}
+    driverClassName: org.postgresql.Driver
+    schema-generate: NONE
+    dialect: POSTGRES
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+      locations: classpath:db/migration
