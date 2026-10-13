@@ -3,6 +3,8 @@ cratewatch-server/.gradle/
 cratewatch-server/build/
 cratewatch-server/cover-art-cache/
 cratewatch-server/artist-photo-cache/
+/cover-art-cache/
+/artist-photo-cache/
 
 # frontend (Node/Vite)
 cratewatch-web/node_modules/

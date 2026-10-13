@@ -94,13 +94,14 @@ public class ArtistController {
         User user = currentUser(authentication);
         Artist artist = findOwnedArtist(id, authentication);
 
-        List<CdRelease> releases = releaseRepository.findByArtistId(artist.getId());
+        List<CdRelease> releases = releaseRepository.findByArtistIdOrderByFirstReleaseDate(artist.getId());
         List<UUID> releaseIds = releases.stream().map(CdRelease::getId).toList();
 
         Map<UUID, String> states = userReleaseStateRepository
-            .findByUserIdAndCdReleaseIdIn(user.getId(), releaseIds).stream()
-            .collect(Collectors.toMap(UserReleaseState::getCdReleaseId, UserReleaseState::getState));
-
+          .findByUserIdAndCdReleaseIdIn(user.getId(), releaseIds)
+          .stream()
+          .collect(Collectors.toMap(UserReleaseState::getCdReleaseId, UserReleaseState::getState));
+        
         return releases.stream()
             .map(r -> ReleaseResponse.from(r, states.getOrDefault(r.getId(), "NONE")))
             .toList();

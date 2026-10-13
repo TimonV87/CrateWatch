@@ -20,6 +20,7 @@ export interface ReleaseResponse {
   releaseType: string
   state: string
   coverArtUrl: string | null
+  firstReleaseDate: string | null
 }
 
 export function searchArtists(query: string, token: string) {

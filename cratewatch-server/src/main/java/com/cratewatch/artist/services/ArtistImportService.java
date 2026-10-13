@@ -68,14 +68,14 @@ public class ArtistImportService {
         LocalDate firstReleaseDate = parseReleaseDate(releaseGroup.firstReleaseDate());
 
         releaseRepository.save(
-          new CdRelease(
-            artist.getId(),
-            releaseGroup.title(),
-            releaseType,
-            firstReleaseDate,
-            releaseGroup.id(),
-            coverArtUrl
-            )
+          CdRelease.builder()
+            .artistId(artist.getId())
+            .title(releaseGroup.title())
+            .releaseType(releaseType)
+            .firstReleaseDate(firstReleaseDate)
+            .musicbrainzReleaseGroupId(releaseGroup.id())
+            .coverArtUrl(coverArtUrl)
+            .build()
         );
     }
 
