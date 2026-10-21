@@ -6,7 +6,7 @@ namespace CrateWatch.Users.Security;
 
 public class TokenService(SymmetricSecurityKey signingKey)
 {
-    public const int ExpiresInSeconds = 3600;
+    public const int ExpiresInSeconds = 7 * 24 * 60 * 60;
     public const string UserIdClaim = "uid";
 
     public string CreateToken(string username)

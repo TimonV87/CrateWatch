@@ -18,10 +18,17 @@ public class ArtistImportService(
     private const int MaxPages = 5;
     private static readonly TimeSpan RateLimitDelay = TimeSpan.FromMilliseconds(1100);
 
-    // Only studio albums are imported (see CONTEXT.md decisions log).
-    private const string ImportedType = "STUDIO_ALBUM";
+    // Studio albums are imported when an artist is added; the other types on demand (see CONTEXT.md decisions log).
+    public const string StudioAlbum = "STUDIO_ALBUM";
+    public static readonly string[] OptionalTypes = ["EP", "COMPILATION", "LIVE", "SOUNDTRACK", "SINGLE", "OTHER"];
 
     public async Task<Artist> ImportReleasesAsync(Artist artist)
+    {
+        await ImportTypesAsync(artist, [StudioAlbum]);
+        return await AssignCoverReleaseAsync(artist);
+    }
+
+    public async Task ImportTypesAsync(Artist artist, ICollection<string> types)
     {
         var offset = 0;
         for (var page = 0; page < MaxPages; page++)
@@ -36,7 +43,7 @@ public class ArtistImportService(
 
             foreach (var releaseGroup in releaseGroups)
             {
-                await ImportReleaseGroupAsync(artist, releaseGroup);
+                await ImportReleaseGroupAsync(artist, releaseGroup, types);
             }
 
             if (releaseGroups.Count < PageSize)
@@ -45,14 +52,12 @@ public class ArtistImportService(
             }
             offset += PageSize;
         }
-
-        return await AssignCoverReleaseAsync(artist);
     }
 
-    private async Task ImportReleaseGroupAsync(Artist artist, MusicBrainzReleaseGroup releaseGroup)
+    private async Task ImportReleaseGroupAsync(Artist artist, MusicBrainzReleaseGroup releaseGroup, ICollection<string> types)
     {
         var releaseType = ReleaseTypeClassifier.Classify(releaseGroup.PrimaryType, releaseGroup.SecondaryTypes);
-        if (releaseType != ImportedType)
+        if (!types.Contains(releaseType))
         {
             return;
         }

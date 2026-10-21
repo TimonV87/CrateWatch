@@ -3,13 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace CrateWatch.Users.Domain;
 
-public record RegisterRequest(
-    [Required(AllowEmptyStrings = false), StringLength(100)] string Username,
-    [Required(AllowEmptyStrings = false), StringLength(int.MaxValue, MinimumLength = 8)] string Password
-);
-
-public record RegisterResponse(Guid Id, string Username);
-
 public record LoginRequest(
     [Required(AllowEmptyStrings = false)] string Username,
     [Required(AllowEmptyStrings = false)] string Password

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using CrateWatch.Artists.Repositories;
 using CrateWatch.Artists.Services;
 using CrateWatch.Configuration;
@@ -7,11 +8,12 @@ using CrateWatch.CoverArt;
 using CrateWatch.Db;
 using CrateWatch.MusicBrainz;
 using CrateWatch.Releases.Repositories;
-using CrateWatch.Releases.Services;
 using CrateWatch.TheAudioDb;
+using CrateWatch.Users.Cli;
 using CrateWatch.Users.Repositories;
 using CrateWatch.Users.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
@@ -49,6 +51,25 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
 builder.Services.AddDbContext<CrateWatchDbContext>(options =>
     options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+
+// Traffic arrives via NPMplus and then the frontend's nginx, so trust two X-Forwarded-For hops to see the real client IP.
+// shortcut: trusts the header from any peer; safe only because the backend port is not published outside Docker.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.ForwardLimit = 2;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// shortcut: per-IP only; add a per-username limit if someone ever sprays one account from many IPs.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1) }));
+});
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -103,7 +124,7 @@ builder.Services.AddHttpClient<MusicBrainzClient>(client =>
 {
     client.BaseAddress = new Uri(config["Services:MusicBrainz"]!);
     client.Timeout = readTimeout;
-    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "CrateWatch/0.1 ( https://github.com/tv/cratewatch )");
+    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "CrateWatch/0.1 ( thijmen@verkerkdigital.nl )");
 });
 builder.Services.AddHttpClient<CoverArtArchiveClient>(client =>
 {
@@ -132,10 +153,18 @@ var app = builder.Build();
 
 DatabaseMigrator.Migrate(connectionString, app.Logger);
 
+if (args is ["create-user", var newUsername])
+{
+    Environment.ExitCode = await CreateUserCommand.RunAsync(app.Services, newUsername);
+    return;
+}
+
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseCors("web");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 await app.RunAsync();

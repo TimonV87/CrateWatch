@@ -1,6 +1,6 @@
 using CrateWatch.Artists.Services;
 
-namespace CrateWatch.Tests;
+namespace CrateWatcher.Tests;
 
 public class ParseReleaseDateTests
 {

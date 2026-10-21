@@ -1,7 +1,7 @@
 using CrateWatch.Caching;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CrateWatch.Tests;
+namespace CrateWatcher.Tests;
 
 public sealed class ImageFileCacheTests : IDisposable
 {

@@ -43,8 +43,10 @@ export function getArtist(id: string, token: string) {
   return getJson<ArtistResponse>(`/artists/${id}`, token)
 }
 
-export function listReleases(artistId: string, token: string) {
-  return getJson<ReleaseResponse[]>(`/artists/${artistId}/releases`, token)
+// Without types the server returns studio albums; each extra type is fetched from MusicBrainz on first use.
+export function listReleases(artistId: string, token: string, types: string[] = []) {
+  const query = types.map((type) => `types=${encodeURIComponent(type)}`).join('&')
+  return getJson<ReleaseResponse[]>(`/artists/${artistId}/releases${query ? `?${query}` : ''}`, token)
 }
 
 export function setReleaseState(releaseId: string, state: ReleaseState, token: string) {

@@ -1,5 +1,7 @@
 using CrateWatch.Artists.Domain;
 using CrateWatch.Artists.Repositories;
+using CrateWatch.Releases.Domain;
+using CrateWatch.Releases.Repositories;
 using CrateWatch.MusicBrainz;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -10,7 +12,8 @@ public class ArtistService(
     ArtistRepository artistRepository,
     UserArtistRepository userArtistRepository,
     ArtistImportService artistImportService,
-    IMemoryCache searchCache,
+    ReleaseRepository releaseRepository,
+    IMemoryCache cache,
     ILogger<ArtistService> log)
 {
     private static readonly TimeSpan SearchResultTtl = TimeSpan.FromHours(1);
@@ -47,10 +50,45 @@ public class ArtistService(
         }
     }
 
+    // Fetches the requested non-studio types from MusicBrainz the first time they are asked for, then returns the stored releases of those types.
+    public async Task<List<CdRelease>> GetReleasesAsync(Artist artist, ICollection<string> types)
+    {
+        var missing = types.Where(t => t != ArtistImportService.StudioAlbum && !cache.TryGetValue(ImportedKey(artist.Id, t), out _)).ToList();
+        if (missing.Count > 0)
+        {
+            var gate = CreateLocks[(uint)artist.MusicbrainzId.GetHashCode() % CreateLocks.Length];
+            await gate.WaitAsync();
+            try
+            {
+                // Re-check: a concurrent request may have imported these while we waited for the lock.
+                missing = missing.Where(t => !cache.TryGetValue(ImportedKey(artist.Id, t), out _)).ToList();
+                if (missing.Count > 0)
+                {
+                    await artistImportService.ImportTypesAsync(artist, missing);
+                    // shortcut: "already imported" lives in process memory; after a restart/24h the next switch-on repeats one idempotent MusicBrainz browse.
+                    foreach (var type in missing)
+                    {
+                        cache.Set(ImportedKey(artist.Id, type), true, TimeSpan.FromHours(24));
+                    }
+                }
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        return (await releaseRepository.FindByArtistIdOrderByFirstReleaseDateAsync(artist.Id))
+            .Where(r => types.Contains(r.ReleaseType))
+            .ToList();
+    }
+
+    private static string ImportedKey(Guid artistId, string type) => $"imported:{artistId}:{type}";
+
     private async Task<Artist> ImportNewArtistAsync(string mbid)
     {
         // shortcut: search results live in process memory, so a restart (or >1h) means "search again"; use a MusicBrainz lookup by id if that gets annoying.
-        if (!searchCache.TryGetValue(SearchKey(mbid), out ArtistSearchResult? found) || found is null)
+        if (!cache.TryGetValue(SearchKey(mbid), out ArtistSearchResult? found) || found is null)
         {
             throw new ArtistNotSearchedException(mbid);
         }
@@ -85,7 +123,7 @@ public class ArtistService(
 
         foreach (var result in results)
         {
-            searchCache.Set(SearchKey(result.MusicbrainzId), result, SearchResultTtl);
+            cache.Set(SearchKey(result.MusicbrainzId), result, SearchResultTtl);
         }
 
         return results;

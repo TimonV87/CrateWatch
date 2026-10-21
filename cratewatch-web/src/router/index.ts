@@ -5,9 +5,8 @@ import ArtistSearchView from '../views/ArtistSearchView.vue'
 import ArtistDetailView from '../views/ArtistDetailView.vue'
 import ReleaseStateListView from '../views/ReleaseStateListView.vue'
 import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
 
-const PUBLIC_PATHS = new Set(['/login', '/register'])
+const PUBLIC_PATHS = new Set(['/login'])
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,7 +17,6 @@ const router = createRouter({
     { path: '/collection', component: ReleaseStateListView, props: { state: 'OWNED', title: 'My collection' } },
     { path: '/wishlist', component: ReleaseStateListView, props: { state: 'WISHLIST', title: 'My wishlist' } },
     { path: '/login', component: LoginView },
-    { path: '/register', component: RegisterView },
   ],
 })
 

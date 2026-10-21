@@ -26,7 +26,9 @@ function onSearch() {
     <v-app-bar v-if="auth.isAuthenticated" flat>
       <template #prepend>
         <v-app-bar-nav-icon aria-label="Menu" @click="drawer = !drawer" />
-        <AppLogo class="ml-2" />
+        <router-link to="/" class="logo-link ml-2" aria-label="Home">
+          <AppLogo />
+        </router-link>
       </template>
 
       <v-spacer />
@@ -65,6 +67,9 @@ function onSearch() {
 </template>
 
 <style scoped>
+.logo-link {
+  color: inherit;
+}
 .search-field {
   flex: 1 1 auto;
 }

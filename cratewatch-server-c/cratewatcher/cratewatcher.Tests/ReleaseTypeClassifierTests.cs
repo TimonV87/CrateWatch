@@ -1,10 +1,9 @@
 using CrateWatch.Releases.Services;
 
-namespace CrateWatch.Tests;
+namespace CrateWatcher.Tests;
 
 public class ReleaseTypeClassifierTests
 {
-    private readonly ReleaseTypeClassifier classifier = new();
 
     [Theory]
     [InlineData("Album", null, "STUDIO_ALBUM")]
@@ -20,6 +19,6 @@ public class ReleaseTypeClassifierTests
     [InlineData(null, null, "OTHER")]
     public void Classifies(string? primary, string[]? secondary, string expected)
     {
-        Assert.Equal(expected, classifier.Classify(primary, secondary));
+        Assert.Equal(expected, ReleaseTypeClassifier.Classify(primary, secondary));
     }
 }

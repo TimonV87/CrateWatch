@@ -5,7 +5,7 @@ using CrateWatch.Configuration;
 using CrateWatch.TheAudioDb;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CrateWatch.Tests;
+namespace CrateWatcher.Tests;
 
 public sealed class ArtistPhotoCacheServiceTests : IDisposable
 {

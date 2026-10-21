@@ -17,7 +17,6 @@ public class ArtistsController(
     ArtistRepository artistRepository,
     UserArtistRepository userArtistRepository,
     ArtistService artistService,
-    ReleaseRepository releaseRepository,
     UserReleaseStateRepository userReleaseStateRepository) : ControllerBase
 {
     [HttpGet("search")]
@@ -60,15 +59,22 @@ public class ArtistsController(
     }
 
     [HttpGet("{id:guid}/releases")]
-    public async Task<ActionResult<List<ReleaseResponse>>> Releases(Guid id)
+    public async Task<ActionResult<List<ReleaseResponse>>> Releases(Guid id, [FromQuery] string[]? types)
     {
+        // Default view is studio albums; other types are fetched on demand when the UI switches them on.
+        string[] requested = types is { Length: > 0 } ? types : [ArtistImportService.StudioAlbum];
+        if (requested.Any(t => t != ArtistImportService.StudioAlbum && !ArtistImportService.OptionalTypes.Contains(t)))
+        {
+            return BadRequest("Unknown release type.");
+        }
+
         var artist = await FindOwnedArtistAsync(id);
         if (artist is null)
         {
             return NotFound();
         }
 
-        var releases = await releaseRepository.FindByArtistIdOrderByFirstReleaseDateAsync(artist.Id);
+        var releases = await artistService.GetReleasesAsync(artist, requested);
         var releaseIds = releases.Select(r => r.Id).ToList();
 
         var states = (await userReleaseStateRepository.FindByUserIdAndCdReleaseIdInAsync(CurrentUserId, releaseIds))

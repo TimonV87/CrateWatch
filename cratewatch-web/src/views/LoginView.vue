@@ -19,7 +19,11 @@ async function onSubmit() {
     await auth.login(username.value, password.value)
     router.push('/')
   } catch (e) {
-    error.value = e instanceof ApiError ? 'Invalid username or password.' : 'Login failed.'
+    if (e instanceof ApiError && e.status === 429) {
+      error.value = 'Too many attempts. Wait a minute and try again.'
+    } else {
+      error.value = e instanceof ApiError ? 'Invalid username or password.' : 'Login failed.'
+    }
   } finally {
     submitting.value = false
   }
@@ -54,11 +58,6 @@ async function onSubmit() {
             </v-btn>
           </v-form>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <span>No account yet?</span>
-          <v-btn variant="text" color="primary" to="/register">Register</v-btn>
-        </v-card-actions>
       </v-card>
     </v-responsive>
   </v-container>

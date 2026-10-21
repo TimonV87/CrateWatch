@@ -10,6 +10,8 @@ dotnet test
 docker build -t cratewatch-server:0.1 .   # same tag docker-compose.yml expects
 ```
 
+Accounts are created on the command line (there is no registration): `dotnet run -- create-user <name>` locally, or see `DEPLOY.md` for the container.
+
 Local secret (kept outside the repo, loaded only when `ASPNETCORE_ENVIRONMENT=Development`):
 
 ```bash

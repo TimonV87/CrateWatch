@@ -17,10 +17,15 @@ interface ArtistGroup {
   releases: ReleaseResponse[]
 }
 
-// First letter A-Z (accents stripped); everything else goes under '#', listed last.
+// Block key: the first character when it is a letter A-Z (accents stripped) or a digit, '#' for anything else.
 function letterOf(name: string) {
   const first = name.normalize('NFD').charAt(0).toUpperCase()
-  return /[A-Z]/.test(first) ? first : '#'
+  return /[0-9A-Z]/.test(first) ? first : '#'
+}
+
+// Digits first, then A-Z, then '#'.
+function blockRank(key: string) {
+  return key === '#' ? 2 : /[0-9]/.test(key) ? 0 : 1
 }
 
 const letters = computed(() => {
@@ -39,7 +44,7 @@ const letters = computed(() => {
   }
 
   return [...byLetter.entries()]
-    .sort(([a], [b]) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)))
+    .sort(([a], [b]) => blockRank(a) - blockRank(b) || a.localeCompare(b))
     .map(([letter, artists]) => ({ letter, artists }))
 })
 

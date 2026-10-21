@@ -5,7 +5,7 @@ using CrateWatch.CoverArt;
 using CrateWatch.Releases.Domain;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CrateWatch.Tests;
+namespace CrateWatcher.Tests;
 
 public sealed class CoverArtCacheServiceTests : IDisposable
 {

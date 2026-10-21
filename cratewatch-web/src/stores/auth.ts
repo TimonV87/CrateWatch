@@ -6,11 +6,6 @@ interface LoginResponse {
   username: string
 }
 
-interface RegisterResponse {
-  id: string
-  username: string
-}
-
 interface AuthState {
   token: string | null
   username: string | null
@@ -33,11 +28,6 @@ export const useAuthStore = defineStore('auth', {
       this.username = response.username
       localStorage.setItem('cratewatch.token', response.access_token)
       localStorage.setItem('cratewatch.username', response.username)
-    },
-
-    async register(username: string, password: string) {
-      await postJson<RegisterResponse>('/auth/register', { username, password })
-      await this.login(username, password)
     },
 
     logout() {
