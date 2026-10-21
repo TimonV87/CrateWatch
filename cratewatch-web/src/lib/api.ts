@@ -38,19 +38,27 @@ async function handleResponse<T>(response: Response, path: string, authenticated
   return (await response.json()) as T
 }
 
-export async function postJson<T>(path: string, body: unknown, token?: string): Promise<T> {
+async function sendJson<T>(method: 'POST' | 'PUT', path: string, body: unknown, token?: string): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers.Authorization = `Bearer ${token}`
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
+    method,
     headers,
     body: JSON.stringify(body),
   })
 
   return handleResponse<T>(response, path, Boolean(token))
+}
+
+export function postJson<T>(path: string, body: unknown, token?: string): Promise<T> {
+  return sendJson<T>('POST', path, body, token)
+}
+
+export function putJson<T>(path: string, body: unknown, token?: string): Promise<T> {
+  return sendJson<T>('PUT', path, body, token)
 }
 
 export async function getJson<T>(path: string, token?: string): Promise<T> {

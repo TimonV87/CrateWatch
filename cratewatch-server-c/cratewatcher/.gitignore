@@ -1,0 +1,8 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+# runtime image caches
+/cover-art-cache/
+/artist-photo-cache/

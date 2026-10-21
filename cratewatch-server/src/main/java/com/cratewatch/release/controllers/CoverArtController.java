@@ -27,7 +27,7 @@ public class CoverArtController {
     @Get("/{id}/cover-art")
     public HttpResponse<byte[]> coverArt(@PathVariable UUID id) {
         return releaseRepository.findById(id)
-            .flatMap(release -> coverArtCacheService.getCoverArt(release).map(bytes -> toResponse(bytes)))
+            .flatMap(release -> coverArtCacheService.getCoverArt(release).map(this::toResponse))
             .orElseGet(HttpResponse::notFound);
     }
 

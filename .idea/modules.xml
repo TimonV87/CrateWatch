@@ -3,8 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/cd-watcher.iml" filepath="$PROJECT_DIR$/.idea/cd-watcher.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cd-watcher-server.main.iml" filepath="$PROJECT_DIR$/.idea/modules/cd-watcher-server.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cd-watcher-server.test.iml" filepath="$PROJECT_DIR$/.idea/modules/cd-watcher-server.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cratewatch-server.main.iml" filepath="$PROJECT_DIR$/.idea/modules/cratewatch-server.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/cratewatch-server.test.iml" filepath="$PROJECT_DIR$/.idea/modules/cratewatch-server.test.iml" />
     </modules>

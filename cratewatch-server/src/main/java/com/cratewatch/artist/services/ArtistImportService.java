@@ -21,9 +21,8 @@ public class ArtistImportService {
     private static final int PAGE_SIZE = 100;
     private static final int MAX_PAGES = 5;
 
-    private static final List<String> COVER_TYPE_PRIORITY = List.of(
-        "STUDIO_ALBUM", "EP", "SINGLE", "COMPILATION", "LIVE", "SOUNDTRACK", "OTHER"
-    );
+    // Only studio albums are imported (see CONTEXT.md decisions log).
+    private static final String IMPORTED_TYPE = "STUDIO_ALBUM";
 
     private final MusicBrainzClient musicBrainzClient;
     private final ArtistRepository artistRepository;
@@ -59,22 +58,22 @@ public class ArtistImportService {
     }
 
     private void importReleaseGroup(Artist artist, MusicBrainzReleaseGroup releaseGroup) {
+        String releaseType = releaseTypeClassifier.classify(releaseGroup.primaryType(), releaseGroup.secondaryTypes());
+        if (!IMPORTED_TYPE.equals(releaseType)) {
+            return;
+        }
         if (releaseRepository.existsByArtistIdAndTitle(artist.getId(), releaseGroup.title())) {
             return;
         }
-
-        String releaseType = releaseTypeClassifier.classify(releaseGroup.primaryType(), releaseGroup.secondaryTypes());
-        String coverArtUrl = "https://coverartarchive.org/release-group/" + releaseGroup.id() + "/front-250";
-        LocalDate firstReleaseDate = parseReleaseDate(releaseGroup.firstReleaseDate());
 
         releaseRepository.save(
           CdRelease.builder()
             .artistId(artist.getId())
             .title(releaseGroup.title())
             .releaseType(releaseType)
-            .firstReleaseDate(firstReleaseDate)
+            .firstReleaseDate(parseReleaseDate(releaseGroup.firstReleaseDate()))
             .musicbrainzReleaseGroupId(releaseGroup.id())
-            .coverArtUrl(coverArtUrl)
+            .coverArtUrl("https://coverartarchive.org/release-group/" + releaseGroup.id() + "/front-250")
             .build()
         );
     }
@@ -102,8 +101,7 @@ public class ArtistImportService {
     private Artist assignCoverRelease(Artist artist) {
         List<CdRelease> releases = releaseRepository.findByArtistId(artist.getId());
 
-        COVER_TYPE_PRIORITY.stream()
-            .flatMap(type -> releases.stream().filter(r -> type.equals(r.getReleaseType())))
+        releases.stream()
             .filter(r -> r.getMusicbrainzReleaseGroupId() != null)
             .findFirst()
             .ifPresent(r -> artist.setCoverReleaseId(r.getId()));

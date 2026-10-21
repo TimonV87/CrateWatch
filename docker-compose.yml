@@ -23,6 +23,7 @@ services:
       DB_NAME: ${DB_NAME:-cdwatcher}
       DB_USER: ${DB_USER:-cdwatcher}
       DB_PASSWORD: ${DB_PASSWORD:-cdwatcher}
+      JWT_GENERATOR_SIGNATURE_SECRET: ${JWT_GENERATOR_SIGNATURE_SECRET:?set JWT_GENERATOR_SIGNATURE_SECRET in .env (32+ chars)}
       COVER_ART_STORAGE_PATH: /app/cover-art-cache
       ARTIST_PHOTO_STORAGE_PATH: /app/artist-photo-cache
     ports:

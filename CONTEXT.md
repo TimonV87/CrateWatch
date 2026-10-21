@@ -4,9 +4,9 @@
 
 **Artist** — a musical act the user tracks. Created manually by user (name lookup against MusicBrainz).
 
-**Release** — one album or EP by an Artist, deduped by title only. Pressing/version are NOT tracked — a reissue/remaster of the same title is the same Release, not a separate one. Sourced from MusicBrainz release-groups on import. Carries a `firstReleaseDate` (nullable, normalized to a full date — MusicBrainz's own year-only/year-month precision isn't tracked separately, see decisions log) for display/sorting; this does not affect title-based dedup.
+**Release** — one studio album by an Artist, deduped by title only. Pressing/version are NOT tracked — a reissue/remaster of the same title is the same Release, not a separate one. Sourced from MusicBrainz release-groups on import; only studio albums are imported (see decisions log). Carries a `firstReleaseDate` (nullable, normalized to a full date — MusicBrainz's own year-only/year-month precision isn't tracked separately, see decisions log) for display/sorting; this does not affect title-based dedup.
 
-**Release Type** — classification imported from MusicBrainz release-group type (Album, EP, Single, Compilation, Live, Soundtrack, etc). All types are imported and stored; the user filters/hides types in the UI afterward rather than choosing at import time.
+**Release Type** — classification derived from the MusicBrainz release-group type (Album, EP, Single, Compilation, Live, Soundtrack, etc). Only `STUDIO_ALBUM` is imported now; other types may still exist on Releases imported before 2026-10-20.
 
 **User** — an account. Artists and Releases are a shared catalog (see ADR [0002](docs/adr/0002-shared-artist-release-catalog.md)) — a User "tracks" an Artist rather than owning a private copy of it; two Users tracking the same real-world artist share the same imported Artist/Release rows, not separate copies.
 
@@ -34,3 +34,4 @@
 - Nav: Artist list -> Artist detail (Release grid, type filter, state toggle) + global Wishlist/Owned views (2026-07-27)
 - Renamed cd-watcher -> CrateWatch (2026-10-12): scope is broadening beyond CDs — vinyl LPs are planned (not yet modeled/built), on top of the already-modeled ShopLink store-watching concept. "CD Watcher" no longer fit.
 - Reversed 2026-10-12 (ADR 0002, supersedes ADR 0001): Artist/Release catalog is now shared, not per-user private. Adding an Artist another User already tracks links to the existing data instead of re-importing. Release state and ShopLinks moved to per-user tables since they can no longer live on the now-shared Release row.
+- Reversed 2026-10-20 (supersedes "Import scope" of 2026-07-27): import keeps only studio albums (primary type Album, no secondary types). EPs, singles, compilations, live, soundtracks and others are skipped at import. Releases imported earlier keep their original types.

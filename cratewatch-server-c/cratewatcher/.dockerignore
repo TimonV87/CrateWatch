@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+.git/
+.idea/
+cratewatcher.Tests/
+cover-art-cache/
+artist-photo-cache/

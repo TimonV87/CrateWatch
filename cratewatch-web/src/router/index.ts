@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import ArtistListView from '../views/ArtistListView.vue'
 import ArtistSearchView from '../views/ArtistSearchView.vue'
 import ArtistDetailView from '../views/ArtistDetailView.vue'
+import ReleaseStateListView from '../views/ReleaseStateListView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 
@@ -14,6 +15,8 @@ const router = createRouter({
     { path: '/', component: ArtistListView },
     { path: '/artists/search', component: ArtistSearchView },
     { path: '/artists/:id', component: ArtistDetailView },
+    { path: '/collection', component: ReleaseStateListView, props: { state: 'OWNED', title: 'My collection' } },
+    { path: '/wishlist', component: ReleaseStateListView, props: { state: 'WISHLIST', title: 'My wishlist' } },
     { path: '/login', component: LoginView },
     { path: '/register', component: RegisterView },
   ],

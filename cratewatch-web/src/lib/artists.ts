@@ -1,4 +1,4 @@
-import { getJson, postJson } from './api'
+import { getJson, postJson, putJson } from './api'
 
 export interface ArtistSearchResult {
   musicbrainzId: string
@@ -14,13 +14,17 @@ export interface ArtistResponse {
   coverArtUrl: string | null
 }
 
+export type ReleaseState = 'NONE' | 'WISHLIST' | 'OWNED' | 'DONT_WANT'
+
 export interface ReleaseResponse {
   id: string
   title: string
   releaseType: string
-  state: string
+  state: ReleaseState
   coverArtUrl: string | null
   firstReleaseDate: string | null
+  artistId: string
+  artistName: string | null
 }
 
 export function searchArtists(query: string, token: string) {
@@ -41,4 +45,12 @@ export function getArtist(id: string, token: string) {
 
 export function listReleases(artistId: string, token: string) {
   return getJson<ReleaseResponse[]>(`/artists/${artistId}/releases`, token)
+}
+
+export function setReleaseState(releaseId: string, state: ReleaseState, token: string) {
+  return putJson<void>(`/releases/${releaseId}/state`, { state }, token)
+}
+
+export function listReleasesByState(state: 'OWNED' | 'WISHLIST', token: string) {
+  return getJson<ReleaseResponse[]>(`/releases?state=${state}`, token)
 }

@@ -7,6 +7,7 @@ import AppLogo from './components/AppLogo.vue'
 const auth = useAuthStore()
 const router = useRouter()
 const search = ref('')
+const drawer = ref(false)
 
 function onLogout() {
   auth.logout()
@@ -24,6 +25,7 @@ function onSearch() {
   <v-app>
     <v-app-bar v-if="auth.isAuthenticated" flat>
       <template #prepend>
+        <v-app-bar-nav-icon aria-label="Menu" @click="drawer = !drawer" />
         <AppLogo class="ml-2" />
       </template>
 
@@ -48,6 +50,14 @@ function onSearch() {
       <v-btn variant="text" @click="onLogout">Log out</v-btn>
     </v-app-bar>
 
+    <v-navigation-drawer v-if="auth.isAuthenticated" v-model="drawer" temporary>
+      <v-list nav @click="drawer = false">
+        <v-list-item to="/" prepend-icon="mdi-account-music" title="Artists" />
+        <v-list-item to="/collection" prepend-icon="mdi-bookshelf" title="Collection" />
+        <v-list-item to="/wishlist" prepend-icon="mdi-heart" title="Wishlist" />
+      </v-list>
+    </v-navigation-drawer>
+
     <v-main>
       <RouterView />
     </v-main>
@@ -57,5 +67,13 @@ function onSearch() {
 <style scoped>
 .search-field {
   flex: 1 1 auto;
+}
+</style>
+
+<style>
+/* Plain links only; Vuetify components rendered as <a> (v-btn, v-card, v-list-item) keep their own styling. */
+a:not([class*='v-']) {
+  color: rgb(var(--v-theme-info));
+  text-decoration: none;
 }
 </style>
