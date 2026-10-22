@@ -13,7 +13,7 @@ public class ArtistRepository(CrateWatchDbContext db)
         db.Artists.FirstOrDefaultAsync(a => a.MusicbrainzId == musicbrainzId);
 
     public Task<List<Artist>> FindByIdInAsync(List<Guid> ids) =>
-        db.Artists.Where(a => ids.Contains(a.Id)).ToListAsync();
+        db.Artists.Where(a => ids.Contains(a.Id)).OrderBy(a => a.Name).ToListAsync();
 
     public async Task<Artist> SaveAsync(Artist artist)
     {

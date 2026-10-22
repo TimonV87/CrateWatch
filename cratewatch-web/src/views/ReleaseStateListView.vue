@@ -75,7 +75,12 @@ function onChange(release: ReleaseResponse, next: ReleaseState) {
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-6">{{ title }}</h1>
+    <h1 class="text-h5 mb-6">
+      {{ title }}
+      <span v-if="!loading && !error" class="text-medium-emphasis">
+        · {{ releases.length }} {{ releases.length === 1 ? 'album' : 'albums' }}
+      </span>
+    </h1>
 
     <v-alert v-if="error" type="error" density="compact" class="mb-4">{{ error }}</v-alert>
 
@@ -92,6 +97,7 @@ function onChange(release: ReleaseResponse, next: ReleaseState) {
           <section v-for="artist in block.artists" :key="artist.id" class="mb-6">
             <h2 class="text-subtitle-1 mb-2">
               <router-link :to="`/artists/${artist.id}`">{{ artist.name }}</router-link>
+              <span class="text-medium-emphasis">· {{ artist.releases.length }}</span>
             </h2>
             <v-row>
               <v-col v-for="release in artist.releases" :key="release.id" cols="6" sm="4" md="3" lg="2">
