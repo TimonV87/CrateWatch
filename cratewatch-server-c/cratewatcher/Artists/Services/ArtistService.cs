@@ -78,9 +78,7 @@ public class ArtistService(
             }
         }
 
-        return (await releaseRepository.FindByArtistIdOrderByFirstReleaseDateAsync(artist.Id))
-            .Where(r => types.Contains(r.ReleaseType))
-            .ToList();
+        return await releaseRepository.FindByArtistIdAndTypesOrderByFirstReleaseDateAsync(artist.Id, types.ToArray());
     }
 
     private static string ImportedKey(Guid artistId, string type) => $"imported:{artistId}:{type}";

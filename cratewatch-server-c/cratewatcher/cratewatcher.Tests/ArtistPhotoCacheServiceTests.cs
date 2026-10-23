@@ -53,7 +53,7 @@ public sealed class ArtistPhotoCacheServiceTests : IDisposable
     public async Task ImageServerError_DoesNotWriteMissingMarker()
     {
         var service = Create(r => r.RequestUri!.Host == "audiodb.test"
-            ? Json("""{"artists":[{"strArtistThumb":"https://img.test/a.jpg"}]}""")
+            ? Json("""{"artists":[{"strArtistThumb":"https://r2.theaudiodb.com/a.jpg"}]}""")
             : new HttpResponseMessage(HttpStatusCode.TooManyRequests));
 
         Assert.Null(await service.GetPhotoAsync(artist));
@@ -64,7 +64,7 @@ public sealed class ArtistPhotoCacheServiceTests : IDisposable
     public async Task Image404_WritesMissingMarker()
     {
         var service = Create(r => r.RequestUri!.Host == "audiodb.test"
-            ? Json("""{"artists":[{"strArtistThumb":"https://img.test/a.jpg"}]}""")
+            ? Json("""{"artists":[{"strArtistThumb":"https://r2.theaudiodb.com/a.jpg"}]}""")
             : new HttpResponseMessage(HttpStatusCode.NotFound));
 
         Assert.Null(await service.GetPhotoAsync(artist));
@@ -75,11 +75,33 @@ public sealed class ArtistPhotoCacheServiceTests : IDisposable
     public async Task Success_CachesImage()
     {
         var service = Create(r => r.RequestUri!.Host == "audiodb.test"
-            ? Json("""{"artists":[{"strArtistThumb":"https://img.test/a.jpg"}]}""")
+            ? Json("""{"artists":[{"strArtistThumb":"https://r2.theaudiodb.com/a.jpg"}]}""")
             : new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2, 3]) });
 
         Assert.Equal(new byte[] { 1, 2, 3 }, await service.GetPhotoAsync(artist));
         Assert.True(File.Exists(ImageFile));
+    }
+
+    [Theory]
+    [InlineData("http://192.168.50.1/admin.jpg")]
+    [InlineData("https://evil.example/a.jpg")]
+    [InlineData("https://theaudiodb.com.evil.example/a.jpg")]
+    [InlineData("http://r2.theaudiodb.com/a.jpg")]
+    public async Task ThumbOutsideTheAudioDb_IsNeverDownloaded(string thumb)
+    {
+        var downloaded = false;
+        var service = Create(r =>
+        {
+            if (r.RequestUri!.Host == "audiodb.test")
+            {
+                return Json($$"""{"artists":[{"strArtistThumb":"{{thumb}}"}]}""");
+            }
+            downloaded = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1]) };
+        });
+
+        Assert.Null(await service.GetPhotoAsync(artist));
+        Assert.False(downloaded);
     }
 
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

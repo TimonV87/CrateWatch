@@ -61,7 +61,7 @@ watch(
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-4">Search results for "{{ route.query.q }}"</h1>
+    <h1 class="page-title mb-4">Search results for "{{ route.query.q }}"</h1>
 
     <v-alert v-if="error" type="error" density="compact" class="mb-4">{{ error }}</v-alert>
 

@@ -20,13 +20,6 @@
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
     "vue-tsc": "^2.2.0",
-    "vite-plugin-vuetify": "^2.0.4",
-    "sass": "^1.83.0"
-  },
-  "allowScripts": {
-    "@parcel/watcher@2.6.0": true,
-    "esbuild@0.25.12": true,
-    "fsevents@2.3.3": true,
-    "vue-demi@0.14.10": true
+    "vite-plugin-vuetify": "^2.0.4"
   }
 }

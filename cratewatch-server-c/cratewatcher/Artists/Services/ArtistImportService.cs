@@ -5,18 +5,20 @@ using CrateWatch.MusicBrainz.Domain;
 using CrateWatch.Releases.Domain;
 using CrateWatch.Releases.Repositories;
 using CrateWatch.Releases.Services;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CrateWatch.Artists.Services;
 
 public class ArtistImportService(
     MusicBrainzClient musicBrainzClient,
     ArtistRepository artistRepository,
-    ReleaseRepository releaseRepository
-    )
+    ReleaseRepository releaseRepository,
+    IMemoryCache cache)
 {
     private const int PageSize = 100;
-    private const int MaxPages = 5;
-    private static readonly TimeSpan RateLimitDelay = TimeSpan.FromMilliseconds(1100);
+    // shortcut: reads at most 25 pages = 2,500 release groups (about 27 s); raise it if an artist has more.
+    private const int MaxPages = 25;
+    private static readonly TimeSpan PageCacheTtl = TimeSpan.FromMinutes(10);
 
     // Studio albums are imported when an artist is added; the other types on demand (see CONTEXT.md decisions log).
     public const string StudioAlbum = "STUDIO_ALBUM";
@@ -30,52 +32,48 @@ public class ArtistImportService(
 
     public async Task ImportTypesAsync(Artist artist, ICollection<string> types)
     {
-        var offset = 0;
+        var knownTitles = await releaseRepository.FindTitlesByArtistIdAsync(artist.Id);
+        var newReleases = new List<CdRelease>();
+
         for (var page = 0; page < MaxPages; page++)
         {
-            if (page > 0)
-            {
-                await Task.Delay(RateLimitDelay);
-            }
-
-            var response = await musicBrainzClient.BrowseReleaseGroupsAsync(artist.MusicbrainzId, PageSize, offset);
-            var releaseGroups = response?.ReleaseGroups ?? [];
+            var releaseGroups = await GetPageAsync(artist.MusicbrainzId, page * PageSize);
 
             foreach (var releaseGroup in releaseGroups)
             {
-                await ImportReleaseGroupAsync(artist, releaseGroup, types);
+                var releaseType = ReleaseTypeClassifier.Classify(releaseGroup.PrimaryType, releaseGroup.SecondaryTypes);
+                // HashSet.Add is false for a title we already have, in the database or earlier in this run.
+                if (types.Contains(releaseType) && knownTitles.Add(releaseGroup.Title))
+                {
+                    newReleases.Add(new CdRelease
+                    {
+                        ArtistId = artist.Id,
+                        Title = releaseGroup.Title,
+                        ReleaseType = releaseType,
+                        FirstReleaseDate = ParseReleaseDate(releaseGroup.FirstReleaseDate),
+                        MusicbrainzReleaseGroupId = releaseGroup.Id,
+                    });
+                }
             }
 
             if (releaseGroups.Count < PageSize)
             {
                 break;
             }
-            offset += PageSize;
-        }
-    }
-
-    private async Task ImportReleaseGroupAsync(Artist artist, MusicBrainzReleaseGroup releaseGroup, ICollection<string> types)
-    {
-        var releaseType = ReleaseTypeClassifier.Classify(releaseGroup.PrimaryType, releaseGroup.SecondaryTypes);
-        if (!types.Contains(releaseType))
-        {
-            return;
-        }
-        if (await releaseRepository.ExistsByArtistIdAndTitleAsync(artist.Id, releaseGroup.Title))
-        {
-            return;
         }
 
-        await releaseRepository.SaveAsync(new CdRelease
-        {
-            ArtistId = artist.Id,
-            Title = releaseGroup.Title,
-            ReleaseType = releaseType,
-            FirstReleaseDate = ParseReleaseDate(releaseGroup.FirstReleaseDate),
-            MusicbrainzReleaseGroupId = releaseGroup.Id,
-            CoverArtUrl = $"https://coverartarchive.org/release-group/{releaseGroup.Id}/front-250",
-        });
+        await releaseRepository.SaveAllAsync(newReleases);
     }
+
+    // A page is kept for a few minutes: turning on another type reuses it, and a retry after a MusicBrainz error
+    // resumes at the page that failed. A failed fetch is never cached.
+    private async Task<List<MusicBrainzReleaseGroup>> GetPageAsync(string artistMbid, int offset) =>
+        (await cache.GetOrCreateAsync($"mb-release-groups:{artistMbid}:{offset}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = PageCacheTtl;
+            var response = await musicBrainzClient.BrowseReleaseGroupsAsync(artistMbid, PageSize, offset);
+            return response?.ReleaseGroups ?? [];
+        }))!;
 
     /// <summary>
     /// MusicBrainz dates have variable precision: "", "YYYY", "YYYY-MM", or "YYYY-MM-DD".

@@ -35,6 +35,7 @@ export function listArtists(token: string) {
   return getJson<ArtistResponse[]>('/artists', token)
 }
 
+// The Java backend needs the name; the C# backend ignores it and uses the name from its own MusicBrainz search.
 export function createArtist(name: string, musicbrainzId: string, token: string) {
   return postJson<ArtistResponse>('/artists', { name, musicbrainzId }, token)
 }

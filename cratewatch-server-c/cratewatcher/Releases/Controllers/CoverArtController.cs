@@ -13,6 +13,11 @@ public class CoverArtController(ReleaseService releaseService) : ControllerBase
     public async Task<IActionResult> CoverArt(Guid id)
     {
         var bytes = await releaseService.GetCoverArtAsync(id);
-        return bytes is null ? NotFound() : File(bytes, "image/jpeg");
+        if (bytes is null)
+        {
+            return NotFound();
+        }
+        Response.Headers.CacheControl = "public, max-age=86400";
+        return File(bytes, "image/jpeg");
     }
 }

@@ -71,3 +71,9 @@ export async function getJson<T>(path: string, token?: string): Promise<T> {
 
   return handleResponse<T>(response, path, Boolean(token))
 }
+
+export async function deleteJson(path: string, token: string): Promise<void> {
+  const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+
+  return handleResponse<void>(response, path, true)
+}

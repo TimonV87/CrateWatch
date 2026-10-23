@@ -4,6 +4,8 @@ import ArtistListView from '../views/ArtistListView.vue'
 import ArtistSearchView from '../views/ArtistSearchView.vue'
 import ArtistDetailView from '../views/ArtistDetailView.vue'
 import ReleaseStateListView from '../views/ReleaseStateListView.vue'
+import ShopsView from '../views/ShopsView.vue'
+import ShopAvailabilityView from '../views/ShopAvailabilityView.vue'
 import LoginView from '../views/LoginView.vue'
 
 const PUBLIC_PATHS = new Set(['/login'])
@@ -16,6 +18,8 @@ const router = createRouter({
     { path: '/artists/:id', component: ArtistDetailView },
     { path: '/collection', component: ReleaseStateListView, props: { state: 'OWNED', title: 'My collection' } },
     { path: '/wishlist', component: ReleaseStateListView, props: { state: 'WISHLIST', title: 'My wishlist' } },
+    { path: '/shops', component: ShopsView },
+    { path: '/shops/availability', component: ShopAvailabilityView },
     { path: '/login', component: LoginView },
   ],
 })

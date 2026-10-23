@@ -13,19 +13,23 @@ public class ReleaseRepository(CrateWatchDbContext db)
         db.CdReleases.Where(r => r.ArtistId == artistId).ToListAsync();
 
     // Postgres sorts NULLs last for ascending order, same as the Java query's NULLS LAST.
-    public Task<List<CdRelease>> FindByArtistIdOrderByFirstReleaseDateAsync(Guid artistId) =>
+    public Task<List<CdRelease>> FindByArtistIdAndTypesOrderByFirstReleaseDateAsync(Guid artistId, string[] types) =>
         db.CdReleases
-            .Where(r => r.ArtistId == artistId)
+            .Where(r => r.ArtistId == artistId && types.Contains(r.ReleaseType))
             .OrderBy(r => r.FirstReleaseDate)
             .ToListAsync();
 
-    public Task<bool> ExistsByArtistIdAndTitleAsync(Guid artistId, string title) =>
-        db.CdReleases.AnyAsync(r => r.ArtistId == artistId && r.Title == title);
+    public async Task<HashSet<string>> FindTitlesByArtistIdAsync(Guid artistId) =>
+        (await db.CdReleases.Where(r => r.ArtistId == artistId).Select(r => r.Title).ToListAsync()).ToHashSet();
 
-    public async Task<CdRelease> SaveAsync(CdRelease release)
+    // One SaveChanges = one transaction: either every new release of the batch is stored or none.
+    public async Task SaveAllAsync(IReadOnlyCollection<CdRelease> releases)
     {
-        db.CdReleases.Add(release);
+        if (releases.Count == 0)
+        {
+            return;
+        }
+        db.CdReleases.AddRange(releases);
         await db.SaveChangesAsync();
-        return release;
     }
 }

@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { listReleasesByState, type ReleaseResponse, type ReleaseState } from '../lib/artists'
 import ReleaseCard from '../components/ReleaseCard.vue'
+import MediaGridSkeleton from '../components/MediaGridSkeleton.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const props = defineProps<{ state: 'OWNED' | 'WISHLIST'; title: string }>()
 
@@ -75,39 +77,43 @@ function onChange(release: ReleaseResponse, next: ReleaseState) {
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-6">
+    <h1 class="page-title mb-6">
       {{ title }}
-      <span v-if="!loading && !error" class="text-medium-emphasis">
+      <span v-if="!loading && !error" class="text-medium-emphasis font-weight-regular">
         · {{ releases.length }} {{ releases.length === 1 ? 'album' : 'albums' }}
       </span>
     </h1>
 
     <v-alert v-if="error" type="error" density="compact" class="mb-4">{{ error }}</v-alert>
 
-    <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+    <MediaGridSkeleton v-if="loading" />
 
-    <v-alert v-else-if="releases.length === 0 && !error" type="info" variant="tonal">
-      Nothing here yet. Use the buttons on an album to add it.
-    </v-alert>
+    <EmptyState
+      v-else-if="releases.length === 0 && !error"
+      :icon="state === 'OWNED' ? 'mdi-bookshelf' : 'mdi-heart-outline'"
+      title="Nothing here yet"
+    >
+      Hover an album and use its buttons to add it.
+    </EmptyState>
 
     <template v-else>
       <div v-for="block in letters" :key="block.letter" class="d-flex mb-8">
-        <div class="letter text-h2 font-weight-bold text-medium-emphasis">{{ block.letter }}</div>
-        <div class="flex-grow-1">
+        <div class="letter font-weight-bold text-medium-emphasis">{{ block.letter }}</div>
+        <div class="flex-grow-1 min-width-0">
           <section v-for="artist in block.artists" :key="artist.id" class="mb-6">
-            <h2 class="text-subtitle-1 mb-2">
-              <router-link :to="`/artists/${artist.id}`">{{ artist.name }}</router-link>
-              <span class="text-medium-emphasis">· {{ artist.releases.length }}</span>
+            <h2 class="section-title mb-3">
+              <router-link :to="`/artists/${artist.id}`" class="plain-link">{{ artist.name }}</router-link>
+              <span class="text-medium-emphasis font-weight-regular">· {{ artist.releases.length }}</span>
             </h2>
-            <v-row>
-              <v-col v-for="release in artist.releases" :key="release.id" cols="6" sm="4" md="3" lg="2">
-                <ReleaseCard
-                  :release="release"
-                  @change="(next) => onChange(release, next)"
-                  @error="error = 'Could not update this album.'"
-                />
-              </v-col>
-            </v-row>
+            <div class="media-grid">
+              <ReleaseCard
+                v-for="release in artist.releases"
+                :key="release.id"
+                :release="release"
+                @change="(next) => onChange(release, next)"
+                @error="error = 'Could not update this album.'"
+              />
+            </div>
           </section>
         </div>
       </div>
@@ -117,8 +123,21 @@ function onChange(release: ReleaseResponse, next: ReleaseState) {
 
 <style scoped>
 .letter {
-  width: 5rem;
+  width: 3rem;
   flex-shrink: 0;
-  line-height: 1;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+.min-width-0 {
+  min-width: 0;
+}
+a.plain-link {
+  color: inherit;
+}
+@media (min-width: 600px) {
+  .letter {
+    width: 4.5rem;
+    font-size: 3rem;
+  }
 }
 </style>

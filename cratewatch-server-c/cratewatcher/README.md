@@ -6,7 +6,7 @@ same Postgres schema, same environment variables (`DB_*`, `JWT_GENERATOR_SIGNATU
 
 ```bash
 dotnet run          # needs Postgres 18 (uuidv7()) at localhost:5432
-dotnet test
+dotnet test    # integration tests start a Postgres 18 container: Docker must be running
 docker build -t cratewatch-server:0.1 .   # same tag docker-compose.yml expects
 ```
 

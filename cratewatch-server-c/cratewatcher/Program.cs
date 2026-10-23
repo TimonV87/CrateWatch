@@ -136,7 +136,20 @@ builder.Services.AddHttpClient<TheAudioDbClient>(client =>
     client.BaseAddress = new Uri($"{config["Services:TheAudioDb"]!.TrimEnd('/')}/{Setting("THEAUDIODB_API_KEY", "123")}/");
     client.Timeout = readTimeout;
 });
-builder.Services.AddHttpClient(ArtistPhotoCacheService.ImageHttpClientName);
+builder.Services.AddHttpClient(ArtistPhotoCacheService.ImageHttpClientName, client =>
+    {
+        client.Timeout = readTimeout;
+        client.MaxResponseContentBufferSize = 5_000_000;
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+
+builder.Services.AddHttpClient(CrateWatch.Shops.Services.ShopScanner.HttpClientName, client =>
+    {
+        client.Timeout = readTimeout;
+        client.MaxResponseContentBufferSize = 2_000_000;
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (compatible; CrateWatch/0.1)");
+    })
+    .ConfigurePrimaryHttpMessageHandler(CrateWatch.Shops.Services.ShopHttpHandler.Create);
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<ArtistRepository>();
@@ -149,6 +162,9 @@ builder.Services.AddScoped<ArtistQueryService>();
 builder.Services.AddScoped<ArtistPhotoService>();
 builder.Services.AddScoped<CrateWatch.Releases.Services.ReleaseService>();
 builder.Services.AddScoped<CrateWatch.Users.Services.AuthService>();
+builder.Services.AddScoped<CrateWatch.Shops.Repositories.ShopRepository>();
+builder.Services.AddScoped<CrateWatch.Shops.Services.ShopScanner>();
+builder.Services.AddScoped<CrateWatch.Shops.Services.ShopService>();
 builder.Services.AddSingleton<CrateWatch.Caching.ImageFileCache>();
 builder.Services.AddScoped<CoverArtCacheService>();
 builder.Services.AddScoped<ArtistPhotoCacheService>();

@@ -13,6 +13,4 @@ public class CdRelease
     public DateOnly? FirstReleaseDate { get; set; }
 
     public string? MusicbrainzReleaseGroupId { get; set; }
-
-    public string? CoverArtUrl { get; set; }
 }

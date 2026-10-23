@@ -1,8 +1,15 @@
 # Production stack: only the frontend (nginx) is published, on 8081. NPMplus proxies the domain to it.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:18
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_DB: ${DB_NAME:-cdwatcher}
       POSTGRES_USER: ${DB_USER:-cdwatcher}
@@ -18,6 +25,7 @@ services:
   backend:
     build: ./cratewatch-server-c/cratewatcher
     restart: unless-stopped
+    logging: *logging
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -37,6 +45,7 @@ services:
   frontend:
     build: ./cratewatch-web
     restart: unless-stopped
+    logging: *logging
     ports:
       - "8081:80"
     depends_on:

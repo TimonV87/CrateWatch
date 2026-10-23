@@ -9,6 +9,8 @@ import {
   type ReleaseResponse,
 } from '../lib/artists'
 import ReleaseCard from '../components/ReleaseCard.vue'
+import MediaGridSkeleton from '../components/MediaGridSkeleton.vue'
+import { API_BASE } from '../lib/api'
 
 const TYPE_SECTIONS: Array<{ key: string; label: string }> = [
   { key: 'STUDIO_ALBUM', label: 'Studio Albums' },
@@ -27,8 +29,10 @@ const artist = ref<ArtistResponse | null>(null)
 const releases = ref<ReleaseResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const photoFailed = ref(false)
 
 const STUDIO = 'STUDIO_ALBUM'
+const studioCount = computed(() => releases.value.filter((r) => r.releaseType === STUDIO).length)
 const optionalTypes = TYPE_SECTIONS.filter((section) => section.key !== STUDIO)
 const enabledTypes = ref(new Set<string>())
 const loadingTypes = ref(new Set<string>())
@@ -80,43 +84,85 @@ onMounted(async () => {
 
 <template>
   <v-container>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/" class="mb-4">All artists</v-btn>
+    <v-btn variant="text" prepend-icon="mdi-chevron-left" to="/" class="mb-4 ml-n3">Artists</v-btn>
 
     <v-alert v-if="error" type="error" density="compact" class="mb-4">{{ error }}</v-alert>
 
-    <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+    <MediaGridSkeleton v-if="loading" />
 
     <template v-else-if="artist">
-      <h1 class="text-h5 mb-4">{{ artist.name }}</h1>
+      <header class="d-flex align-center ga-4 ga-sm-6 mb-6">
+        <div class="artist-photo">
+          <v-img
+            v-if="artist.coverArtUrl && !photoFailed"
+            :src="API_BASE + artist.coverArtUrl"
+            aspect-ratio="1"
+            cover
+            @error="photoFailed = true"
+          />
+          <div v-else class="media-placeholder">
+            <v-icon icon="mdi-account-music" size="48" />
+          </div>
+        </div>
+        <div class="min-width-0">
+          <h1 class="page-title">{{ artist.name }}</h1>
+          <div class="text-body-1 text-medium-emphasis">
+            {{ studioCount }} studio {{ studioCount === 1 ? 'album' : 'albums' }}
+          </div>
+        </div>
+      </header>
 
-      <div class="d-flex flex-wrap ga-4 mb-6">
-        <v-switch
+      <div class="d-flex flex-wrap ga-2 mb-8" role="group" aria-label="Show more release types">
+        <v-chip
           v-for="option in optionalTypes"
           :key="option.key"
-          :label="option.label"
-          :model-value="enabledTypes.has(option.key)"
-          :loading="loadingTypes.has(option.key)"
+          size="large"
+          :variant="enabledTypes.has(option.key) ? 'flat' : 'tonal'"
+          :color="enabledTypes.has(option.key) ? 'primary' : undefined"
+          :prepend-icon="loadingTypes.has(option.key) ? 'mdi-loading mdi-spin' : enabledTypes.has(option.key) ? 'mdi-check' : undefined"
           :disabled="loadingTypes.has(option.key)"
-          color="primary"
-          density="compact"
-          hide-details
-          @update:model-value="(on) => toggleType(option.key, Boolean(on))"
-        />
+          :aria-pressed="enabledTypes.has(option.key)"
+          @click="toggleType(option.key, !enabledTypes.has(option.key))"
+        >
+          {{ option.label }}
+        </v-chip>
       </div>
 
-      <section v-for="section in sections" :key="section.key" class="mb-8">
-        <h2 class="text-subtitle-1 mb-2">{{ section.label }}</h2>
+      <section v-for="section in sections" :key="section.key" class="mb-10">
+        <h2 class="section-title mb-3">{{ section.label }}</h2>
         <p v-if="section.releases.length === 0" class="text-body-2 text-medium-emphasis">None found.</p>
-        <v-row>
-          <v-col v-for="release in section.releases" :key="release.id" cols="6" sm="4" md="3" lg="2">
-            <ReleaseCard :release="release" @change="error = null" @error="error = 'Could not update this album.'" />
-          </v-col>
-        </v-row>
+        <div class="media-grid">
+          <ReleaseCard
+            v-for="release in section.releases"
+            :key="release.id"
+            :release="release"
+            @change="error = null"
+            @error="error = 'Could not update this album.'"
+          />
+        </div>
       </section>
 
       <v-alert v-if="sections.length === 0" type="info" variant="tonal">
-        No studio albums found for this artist. Use the switches to look for other releases.
+        No studio albums found for this artist. Use the chips above to look for other releases.
       </v-alert>
     </template>
   </v-container>
 </template>
+
+<style scoped>
+.artist-photo {
+  flex-shrink: 0;
+  width: 96px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.min-width-0 {
+  min-width: 0;
+}
+@media (min-width: 600px) {
+  .artist-photo {
+    width: 160px;
+  }
+}
+</style>

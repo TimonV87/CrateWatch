@@ -12,3 +12,7 @@ cratewatch-web/dist/
 
 # env
 .env
+
+# IDE / per-user settings
+.idea/
+*.DotSettings.user

@@ -1,3 +1,5 @@
+# Local development database only (the app itself runs with `dotnet run` / `npm run dev`).
+# Production uses docker-compose.prod.yml, see DEPLOY.md.
 services:
   postgres:
     image: postgres:18
@@ -15,34 +17,5 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
-    image: cratewatch-server:0.1
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-cdwatcher}
-      DB_USER: ${DB_USER:-cdwatcher}
-      DB_PASSWORD: ${DB_PASSWORD:-cdwatcher}
-      JWT_GENERATOR_SIGNATURE_SECRET: ${JWT_GENERATOR_SIGNATURE_SECRET:?set JWT_GENERATOR_SIGNATURE_SECRET in .env (32+ chars)}
-      COVER_ART_STORAGE_PATH: /app/cover-art-cache
-      ARTIST_PHOTO_STORAGE_PATH: /app/artist-photo-cache
-    ports:
-      - "8080:8080"
-    volumes:
-      - cover-art-cache:/app/cover-art-cache
-      - artist-photo-cache:/app/artist-photo-cache
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  frontend:
-    build: ./cratewatch-web
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
-
 volumes:
   postgres-data:
-  cover-art-cache:
-  artist-photo-cache:

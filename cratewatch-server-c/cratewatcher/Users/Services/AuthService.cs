@@ -6,11 +6,15 @@ namespace CrateWatch.Users.Services;
 
 public class AuthService(UserRepository userRepository, TokenService tokenService)
 {
+    // Checked even for unknown users, so the response time does not reveal which usernames exist.
+    private static readonly string DummyHash = BCrypt.Net.BCrypt.HashPassword("not-a-real-password", workFactor: 10);
+
     // Returns null on unknown user or wrong password.
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
         var user = await userRepository.FindByUsernameAsync(request.Username);
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        var passwordOk = BCrypt.Net.BCrypt.Verify(request.Password, user?.PasswordHash ?? DummyHash);
+        if (user is null || !passwordOk)
         {
             return null;
         }

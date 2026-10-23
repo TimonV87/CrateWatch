@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { listArtists, type ArtistResponse } from '../lib/artists'
 import { API_BASE } from '../lib/api'
+import MediaGridSkeleton from '../components/MediaGridSkeleton.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const auth = useAuthStore()
 const artists = ref<ArtistResponse[]>([])
@@ -27,19 +29,19 @@ function markCoverFailed(id: string) {
 
 <template>
   <v-container>
+    <h1 class="page-title mb-6">Artists</h1>
+
     <v-alert v-if="error" type="error" density="compact" class="mb-4">{{ error }}</v-alert>
 
-    <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+    <MediaGridSkeleton v-if="loading" round />
 
-    <template v-else-if="artists.length === 0">
-      <v-alert type="info" variant="tonal">
-        No artists yet. Use the search bar above to find and add one.
-      </v-alert>
-    </template>
+    <EmptyState v-else-if="artists.length === 0" icon="mdi-account-music" title="No artists yet">
+      Use the search bar above to find and add one.
+    </EmptyState>
 
-    <v-row v-else>
-      <v-col v-for="artist in artists" :key="artist.id" cols="6" sm="4" md="3" lg="2">
-        <v-card :to="`/artists/${artist.id}`">
+    <div v-else class="media-grid">
+      <router-link v-for="artist in artists" :key="artist.id" :to="`/artists/${artist.id}`" class="artist-card">
+        <div class="artist-card__photo">
           <v-img
             v-if="artist.coverArtUrl && !failedCoverIds.has(artist.id)"
             :src="API_BASE + artist.coverArtUrl"
@@ -47,24 +49,24 @@ function markCoverFailed(id: string) {
             cover
             @error="markCoverFailed(artist.id)"
           />
-          <div v-else class="artist-placeholder">
+          <div v-else class="media-placeholder">
             <v-icon icon="mdi-account-music" size="48" />
           </div>
-          <v-card-text>
-            <div class="text-body-2 text-center">{{ artist.name }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+        </div>
+        <div class="media-title text-center mt-3">{{ artist.name }}</div>
+      </router-link>
+    </div>
   </v-container>
 </template>
 
 <style scoped>
-.artist-placeholder {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(255, 255, 255, 0.05);
+a.artist-card {
+  min-width: 0;
+  color: inherit;
+}
+.artist-card__photo {
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 </style>

@@ -13,6 +13,11 @@ public class ArtistPhotoController(ArtistPhotoService artistPhotoService) : Cont
     public async Task<IActionResult> Photo(Guid id)
     {
         var bytes = await artistPhotoService.GetPhotoAsync(id);
-        return bytes is null ? NotFound() : File(bytes, "image/jpeg");
+        if (bytes is null)
+        {
+            return NotFound();
+        }
+        Response.Headers.CacheControl = "public, max-age=86400";
+        return File(bytes, "image/jpeg");
     }
 }

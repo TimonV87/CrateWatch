@@ -20,8 +20,14 @@ public class ArtistPhotoCacheService(
     {
         var response = await theAudioDbClient.LookupByMbidAsync(artist.MusicbrainzId);
         var thumbUrl = response?.Artists?.FirstOrDefault()?.StrArtistThumb;
-        return string.IsNullOrWhiteSpace(thumbUrl) ? null : await DownloadImageAsync(thumbUrl);
+        return IsAllowedImageUrl(thumbUrl) ? await DownloadImageAsync(thumbUrl!) : null;
     }
+
+    // The URL comes from a third-party JSON; never let it point the server at our own network.
+    private static bool IsAllowedImageUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+        && (uri.Host == "theaudiodb.com" || uri.Host.EndsWith(".theaudiodb.com", StringComparison.OrdinalIgnoreCase));
 
     private async Task<byte[]?> DownloadImageAsync(string url)
     {

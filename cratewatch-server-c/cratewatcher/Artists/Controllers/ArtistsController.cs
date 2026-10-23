@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using CrateWatch.Artists.Domain;
 using CrateWatch.Artists.Services;
@@ -14,7 +15,7 @@ namespace CrateWatch.Artists.Controllers;
 public class ArtistsController(ArtistService artistService, ArtistQueryService artistQueryService) : ControllerBase
 {
     [HttpGet("search")]
-    public async Task<ActionResult<List<ArtistSearchResult>>> Search([FromQuery] string query) =>
+    public async Task<ActionResult<List<ArtistSearchResult>>> Search([FromQuery, Required(AllowEmptyStrings = false)] string query) =>
         await artistService.SearchAlbumsAsync(query);
 
     [HttpGet]
