@@ -44,6 +44,15 @@ Status key: `[x]` fixed and tested, `[~]` partly fixed (what is left is written 
 - [x] **9. Dev compose and README described the old Java setup** (`docker-compose.yml`, `README.md`)
   - Fixed: `docker-compose.yml` is now only a local Postgres 18; the README describes the C# + Vue run steps and links `DEPLOY.md`.
 
+## Found in production
+
+- [x] **19. "Scan wishlist" gave a 504 Gateway time-out** (`Shops/Services/ShopService.cs`, `Shops/Controllers/ShopsController.cs`, `ShopAvailabilityView.vue`)
+  - Cause: the scan ran inside one web request. It waits 1-2 s between checks, plus the shop's own answer time, per shop. A wishlist of about 20-25 albums already takes over 60 s, and NPMplus gives up after 60 s by default (Cloudflare after 100 s, the frontend nginx after 120 s). The proxy answered 504, and closing that connection also cancelled the scan on the server, so its results were thrown away: repeating it never worked.
+  - Fixed: `POST /shops/scan` now starts the scan in the background and answers `202` at once. `GET /shops/scan` returns `{running, done, total, result, failed}`. The page polls it every 2 s, shows "Checked 12 of 40 ...", and picks a running scan up again after a page reload. A second start while one runs is still `409`. The background scan uses its own database scope and the app's shutdown token, not the request's.
+  - Tests (`Integration/ShopScanTests.cs`, with a fake shop): the POST returns in under 0.9 s while the scan takes over 1.6 s; the scan then finishes with the right counts and the match shows in the availability list; a second start gives 409 and other users do not see the scan; a finished scan can be started again. With the old behaviour put back, the first test fails (POST took 1.96 s).
+  - Limits (`shortcut:` comment kept): progress is in memory, so a restart forgets a running scan and the user starts it again; one backend instance only. The artist import is also inside one request but takes at most about 27 s, under the 60 s limit.
+  - Deploy both the backend and the frontend together: the response of `POST /shops/scan` changed, so an old frontend with a new backend (or the reverse) shows a wrong result.
+
 ## Nice to have
 
 - [x] **10. Login timing showed which usernames exist** (`Users/Services/AuthService.cs`)

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrateWatch.MusicBrainz;
+using CrateWatch.Shops.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,9 @@ public sealed class ApiFixture : IAsyncLifetime
     /// <summary>Stands in for musicbrainz.org, so no test needs the internet.</summary>
     public FakeMusicBrainz MusicBrainz { get; } = new();
 
+    /// <summary>Stands in for every webshop a user adds.</summary>
+    public FakeShop Shop { get; } = new();
+
     public async Task InitializeAsync()
     {
         await postgres.StartAsync();
@@ -41,7 +45,10 @@ public sealed class ApiFixture : IAsyncLifetime
         db = NpgsqlDataSource.Create(postgres.GetConnectionString());
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddHttpClient<MusicBrainzClient>().ConfigurePrimaryHttpMessageHandler(() => MusicBrainz)));
+            {
+                services.AddHttpClient<MusicBrainzClient>().ConfigurePrimaryHttpMessageHandler(() => MusicBrainz);
+                services.AddHttpClient(ShopScanner.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => Shop);
+            }));
         factory.CreateClient().Dispose(); // starts the app, which runs the database migration
     }
 
@@ -85,8 +92,11 @@ public sealed class ApiFixture : IAsyncLifetime
     public Task<Guid> NewArtistAsync() =>
         ScalarAsync<Guid>("INSERT INTO artists (name, musicbrainz_id) VALUES ($1, $2) RETURNING id", "Test Artist", Guid.NewGuid().ToString());
 
-    public Task<Guid> NewReleaseAsync(Guid artistId) =>
-        ScalarAsync<Guid>("INSERT INTO cd_releases (artist_id, title, release_type) VALUES ($1, $2, 'STUDIO_ALBUM') RETURNING id", artistId, $"Album {Guid.NewGuid():N}");
+    public Task<Guid> NewReleaseAsync(Guid artistId, string? title = null) =>
+        ScalarAsync<Guid>("INSERT INTO cd_releases (artist_id, title, release_type) VALUES ($1, $2, 'STUDIO_ALBUM') RETURNING id", artistId, title ?? $"Album {Guid.NewGuid():N}");
+
+    public Task<Guid> NewShopAsync(Guid userId) =>
+        ScalarAsync<Guid>("INSERT INTO shops (user_id, name, search_url_template) VALUES ($1, 'Fake Shop', 'https://shop.test/search?q={query}') RETURNING id", userId);
 
     public async Task TrackAsync(Guid userId, Guid artistId) =>
         await ScalarAsync<Guid>("INSERT INTO user_artists (user_id, artist_id) VALUES ($1, $2) RETURNING id", userId, artistId);

@@ -13,6 +13,15 @@ export interface ScanResult {
   failed: number
 }
 
+// A scan runs in the background on the server; the page polls this while `running` is true.
+export interface ScanStatus {
+  running: boolean
+  done: number
+  total: number
+  result: ScanResult | null
+  failed: boolean
+}
+
 export interface ShopOffer {
   shopId: string
   shopName: string
@@ -43,8 +52,12 @@ export function deleteShop(id: string, token: string) {
   return deleteJson(`/shops/${id}`, token)
 }
 
-export function scanShops(token: string) {
-  return postJson<ScanResult>('/shops/scan', {}, token)
+export function startScan(token: string) {
+  return postJson<ScanStatus>('/shops/scan', {}, token)
+}
+
+export function getScanStatus(token: string) {
+  return getJson<ScanStatus>('/shops/scan', token)
 }
 
 export function listAvailability(token: string) {

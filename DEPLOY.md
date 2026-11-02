@@ -1,10 +1,10 @@
 # Deploying CrateWatch on Proxmox (runbook)
 
-Target: `https://cdwatcher.verkerkdigital.nl`. Stack: `docker-compose.prod.yml` (postgres, C# backend, nginx frontend).
+Target: `https://cratewatch.verkerkdigital.nl`. Stack: `docker-compose.prod.yml` (postgres, C# backend, nginx frontend).
 Only the frontend is published, on port **8081**. NPMplus terminates HTTPS and proxies to `192.168.50.109:8081`.
 
 ```
-browser -> NPMplus (https) -> VM 192.168.50.109:8081 nginx -> /api/* -> backend:8080 -> postgres
+browser -> Cloudflare -> NPMplus (https) -> VM 192.168.50.109:8081 nginx -> /api/* -> backend:8080 -> postgres
                                                            -> everything else: the static site
 ```
 
@@ -173,9 +173,9 @@ From your Mac open `http://192.168.50.109:8081` and log in.
 
 1. DNS: at the DNS provider for `verkerkdigital.nl` add an **A record** `cdwatcher` -> your public IP (skip if a wildcard/DDNS record already covers it).
 2. NPMplus web UI -> Proxy Hosts -> Add Proxy Host:
-   - **Details:** Domain `cdwatcher.verkerkdigital.nl`, Scheme `http`, Forward Hostname/IP `192.168.50.109`, Port `8081`, Block Common Exploits **on**, no Access List.
+   - **Details:** Domain `cratewatch.verkerkdigital.nl`, Scheme `http`, Forward Hostname/IP `192.168.50.109`, Port `8081`, Block Common Exploits **on**, no Access List.
    - **SSL:** Request a new certificate (Let's Encrypt), turn on Force SSL and HTTP/2, accept the terms, Save.
-   - If the certificate fails: check DNS has propagated (`dig cdwatcher.verkerkdigital.nl`) and that ports 80 and 443 on the router reach NPMplus.
+   - If the certificate fails: check DNS has propagated (`dig cratewatch.verkerkdigital.nl`) and that ports 80 and 443 on the router reach NPMplus.
 3. After HTTPS works: edit the proxy host again and turn on HSTS.
 
 ## 8. Lock down port 8081 (Proxmox firewall, not ufw)
@@ -189,14 +189,19 @@ Docker's published ports bypass `ufw`, so use the Proxmox VM firewall. Proxmox w
 
 Test from a machine other than NPMplus (it should time out): `curl -m 3 http://192.168.50.109:8081`
 
-The app trusts exactly two `X-Forwarded-For` hops (NPMplus + the frontend's nginx) to see the real client IP for the login rate limit. Do not add another proxy in between without changing `ForwardLimit` in `Program.cs`.
+The login rate limit needs the visitor's real IP, which the app reads from `X-Forwarded-For`. It must trust exactly as many proxies as sit in front of it, set with `FORWARDED_IP_HOPS` in `.env` (default `2` = NPMplus + the frontend's nginx). **With Cloudflare in front of NPMplus this is usually `3`.** If the number is too low, the app counts Cloudflare's or NPMplus's address instead of the visitor's: everyone shares one limit of 5 logins per minute. If it is too high, a visitor can fake their address.
+
+How to find the right number: log in once from your phone (mobile data), then on the VM run `docker compose -f docker-compose.prod.yml logs frontend | tail -3`. The last quoted field of each line is the `X-Forwarded-For` that reached nginx.
+- One address (your own IP): the default `2` is right.
+- Two addresses (your IP, then a Cloudflare `104.x`, `172.x` or `162.x` address): put `FORWARDED_IP_HOPS=3` in `.env`, then `docker compose -f docker-compose.prod.yml up -d`.
+- After changing it, six wrong logins in a minute from one device should give 429, while a second device (other network) can still log in.
 
 ## 9. Verify from outside
 
 ```bash
-curl -sI https://cdwatcher.verkerkdigital.nl | head -3                                   # HTTP/2 200
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cdwatcher.verkerkdigital.nl/api/v1/auth/register   # 404
-for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w '%{http_code} ' -X POST https://cdwatcher.verkerkdigital.nl/api/v1/login -H 'Content-Type: application/json' -d '{"username":"x","password":"wrongwrong"}'; done; echo
+curl -sI https://cratewatch.verkerkdigital.nl | head -3                                   # HTTP/2 200
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cratewatch.verkerkdigital.nl/api/v1/auth/register   # 404
+for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w '%{http_code} ' -X POST https://cratewatch.verkerkdigital.nl/api/v1/login -H 'Content-Type: application/json' -d '{"username":"x","password":"wrongwrong"}'; done; echo
 # expected: 401 401 401 401 401 429
 ```
 

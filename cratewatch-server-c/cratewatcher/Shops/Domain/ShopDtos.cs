@@ -17,6 +17,9 @@ public record CreateShopRequest(
 
 public record ScanResult(int Checked, int Found, int Failed);
 
+// What the page shows while a scan runs in the background; Result is set when it has finished.
+public record ScanStatus(bool Running, int Done, int Total, ScanResult? Result, bool Failed);
+
 public record ShopOffer(Guid ShopId, string ShopName, string Url, DateTimeOffset CheckedAt);
 
 public record AvailableRelease(ReleaseResponse Release, List<ShopOffer> Offers);

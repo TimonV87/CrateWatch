@@ -31,6 +31,8 @@ var connectionString = new NpgsqlConnectionStringBuilder
     Database = Setting("DB_NAME", "cdwatcher"),
     Username = Setting("DB_USER", "cdwatcher"),
     Password = Setting("DB_PASSWORD", "cdwatcher"),
+    // We use password login; without this Npgsql probes for Kerberos and logs "Cannot load library libgssapi_krb5" in the slim image.
+    GssEncryptionMode = GssEncryptionMode.Disable,
 }.ConnectionString;
 
 var jwtSecret = config["JWT_GENERATOR_SIGNATURE_SECRET"];
@@ -52,12 +54,13 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 builder.Services.AddDbContext<CrateWatchDbContext>(options =>
     options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
-// Traffic arrives via NPMplus and then the frontend's nginx, so trust two X-Forwarded-For hops to see the real client IP.
+// Traffic arrives via (Cloudflare,) NPMplus and the frontend's nginx; trusting the right number of X-Forwarded-For hops gives the real client IP.
 // shortcut: trusts the header from any peer; safe only because the backend port is not published outside Docker.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
-    options.ForwardLimit = 2;
+    // Proxies between the visitor and this app, counting the frontend's nginx: NPMplus + nginx = 2, Cloudflare in front of NPMplus = 3.
+    options.ForwardLimit = int.Parse(Setting("FORWARDED_IP_HOPS", "2"));
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
