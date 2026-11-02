@@ -12,8 +12,9 @@ public class ShopService(
     UserReleaseStateRepository userReleaseStateRepository,
     ShopScanner scanner)
 {
-    public const int MaxShops = 10;
-    private const int ParallelRequests = 4;
+    private const int MaxShops = 10;
+    private const int MinDelayMs = 1000;
+    private const int MaxDelayMs = 2000;
 
     // shortcut: in-process, only safe with one backend instance (same as ArtistService.CreateLocks); a second scan by the same user would trip the unique index.
     private static readonly ConcurrentDictionary<Guid, byte> RunningScans = new();
@@ -62,7 +63,7 @@ public class ShopService(
         return true;
     }
 
-    // shortcut: runs inside the request, fine for a few hundred checks (shops x wishlist); move to a background job beyond that.
+    // shortcut: runs inside the request; with a 1-2 s pause per check, ~60 wishlist items per shop fit in nginx's 120 s proxy_read_timeout. Move to a background job beyond that.
     public async Task<ScanResult> ScanAsync(Guid userId, CancellationToken ct)
     {
         if (!RunningScans.TryAdd(userId, 0))
@@ -74,38 +75,65 @@ public class ShopService(
         {
             var shops = await shopRepository.FindByUserIdAsync(userId);
             var wishlist = await userReleaseStateRepository.FindReleasesByStateAsync(userId, "WISHLIST");
-            var pairs = shops.SelectMany(s => wishlist.Select(w => (Shop: s, w.Release, w.ArtistName))).ToList();
-
-            var checkedPairs = new ConcurrentBag<(Guid ShopId, Guid ReleaseId)>();
-            var found = new ConcurrentBag<ShopAvailability>();
+            var checks = new ConcurrentBag<ShopCheck>();
             var now = DateTimeOffset.UtcNow;
 
-            await Parallel.ForEachAsync(pairs, new ParallelOptions { MaxDegreeOfParallelism = ParallelRequests, CancellationToken = ct },
-                async (pair, token) =>
+            // Shops are scanned in parallel; within one shop the requests are sequential, so no shop sees a burst.
+            await Parallel.ForEachAsync(shops, new ParallelOptions { MaxDegreeOfParallelism = MaxShops, CancellationToken = ct },
+                async (shop, token) =>
                 {
-                    try
+                    foreach (var check in await ScanShopAsync(shop, wishlist, token))
                     {
-                        var url = await scanner.FindAsync(pair.Shop, pair.ArtistName, pair.Release.Title, token);
-                        checkedPairs.Add((pair.Shop.Id, pair.Release.Id));
-                        if (url is not null)
-                        {
-                            found.Add(new ShopAvailability { ShopId = pair.Shop.Id, CdReleaseId = pair.Release.Id, Url = url, CheckedAt = now });
-                        }
-                    }
-                    catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !token.IsCancellationRequested)
-                    {
-                        // Left out of checkedPairs: the previous result for this pair stays.
+                        checks.Add(check);
                     }
                 });
 
-            await shopRepository.SaveScanAsync(shops.Select(s => s.Id).ToList(), checkedPairs.ToHashSet(), found.ToList());
-            return new ScanResult(checkedPairs.Count, found.Count, pairs.Count - checkedPairs.Count);
+            var checkedPairs = checks.Select(c => (c.ShopId, c.ReleaseId)).ToHashSet();
+            var found = checks
+                .Where(c => c.Url is not null)
+                .Select(c => new ShopAvailability { ShopId = c.ShopId, CdReleaseId = c.ReleaseId, Url = c.Url!, CheckedAt = now })
+                .ToList();
+
+            await shopRepository.SaveScanAsync(shops.Select(s => s.Id).ToList(), checkedPairs, found);
+            return new ScanResult(checkedPairs.Count, found.Count, shops.Count * wishlist.Count - checkedPairs.Count);
         }
         finally
         {
             RunningScans.TryRemove(userId, out _);
         }
     }
+
+    private async Task<List<ShopCheck>> ScanShopAsync(Shop shop, List<(CdRelease Release, string ArtistName)> wishlist, CancellationToken ct)
+    {
+        var checks = new List<ShopCheck>();
+        foreach (var (index, (release, artistName)) in wishlist.Index())
+        {
+            if (index > 0)
+            {
+                await Task.Delay(Random.Shared.Next(MinDelayMs, MaxDelayMs + 1), ct);
+            }
+            if (await CheckAsync(shop, release, artistName, ct) is { } check)
+            {
+                checks.Add(check);
+            }
+        }
+        return checks;
+    }
+
+    // Null when the shop could not be read: the pair is left out, so its previous result stays.
+    private async Task<ShopCheck?> CheckAsync(Shop shop, CdRelease release, string artistName, CancellationToken ct)
+    {
+        try
+        {
+            return new ShopCheck(shop.Id, release.Id, await scanner.FindAsync(shop, artistName, release.Title, ct));
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    private sealed record ShopCheck(Guid ShopId, Guid ReleaseId, string? Url);
 
     public async Task<List<AvailableRelease>> AvailabilityAsync(Guid userId)
     {
